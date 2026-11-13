@@ -1,0 +1,22 @@
+# Path-based routing: /patients/... -> patient-service, /appointments/... -> appointment-service
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: careconnect
+  namespace: careconnect
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2     # strip the prefix
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /patients(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service: { name: patient-service, port: { number: 80 } }
+          - path: /appointments(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service: { name: appointment-service, port: { number: 80 } }

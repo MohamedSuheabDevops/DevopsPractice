@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: careconnect-alb
+  namespace: careconnect
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing         # or "internal"
+    alb.ingress.kubernetes.io/target-type: ip                 # pods registered directly (needs VPC CNI)
+    alb.ingress.kubernetes.io/healthcheck-path: /health       # ALB target-group health check
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: "15"
+    alb.ingress.kubernetes.io/healthy-threshold-count: "2"
+    alb.ingress.kubernetes.io/success-codes: "200"
+spec:
+  ingressClassName: alb
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: appointment-service, port: { number: 80 } }

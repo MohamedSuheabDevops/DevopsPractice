@@ -1,0 +1,60 @@
+# EKS REFERENCE (needs the ADOT EKS add-on + cert-manager). Read it, don't expect it to run as-is.
+# ADOT = AWS Distro for OpenTelemetry. The operator watches these custom resources.
+apiVersion: opentelemetry.io/v1beta1
+kind: OpenTelemetryCollector
+metadata:
+  name: adot
+  namespace: careconnect
+spec:
+  mode: deployment                      # or daemonset / sidecar / statefulset
+  serviceAccount: adot-collector        # linked to an IAM role via Pod Identity (xray, logs, aps permissions)
+  config:
+    receivers:
+      otlp:
+        protocols:
+          grpc: { endpoint: 0.0.0.0:4317 }
+          http: { endpoint: 0.0.0.0:4318 }
+    processors:
+      batch: {}
+      filter/health:                    # drop probe spans: ~85% fewer traces = ~85% lower X-Ray cost
+        error_mode: ignore
+        traces:
+          span:
+            - 'attributes["http.target"] == "/actuator/health"'
+            - 'attributes["http.target"] == "/health"'
+    exporters:
+      awsxray: { region: us-east-1 }                                   # TRACES -> X-Ray
+      awscloudwatchlogs:                                               # LOGS -> CloudWatch Logs
+        log_group_name: /careconnect/app
+        log_stream_name: otel
+        region: us-east-1
+      prometheusremotewrite:                                           # METRICS -> Amazon Managed Prometheus
+        endpoint: https://aps-workspaces.us-east-1.amazonaws.com/workspaces/<WORKSPACE_ID>/api/v1/remote_write
+        auth: { authenticator: sigv4auth }
+    extensions:
+      sigv4auth: { region: us-east-1, service: aps }
+    service:
+      extensions: [sigv4auth]
+      pipelines:
+        traces:  { receivers: [otlp], processors: [filter/health, batch], exporters: [awsxray] }
+        logs:    { receivers: [otlp], processors: [batch], exporters: [awscloudwatchlogs] }
+        metrics: { receivers: [otlp], processors: [batch], exporters: [prometheusremotewrite] }
+---
+# AUTO-INSTRUMENTATION: no code changes. The operator injects an agent via an annotation.
+apiVersion: opentelemetry.io/v1alpha1
+kind: Instrumentation
+metadata:
+  name: careconnect-instrumentation
+  namespace: careconnect
+spec:
+  exporter:
+    endpoint: http://adot-collector.careconnect:4317
+  sampler:
+    type: parentbased_traceidratio
+    argument: "0.25"                    # sample 25% of traces
+  java: {}
+  nodejs: {}
+# Then on a Deployment's POD TEMPLATE:
+#   annotations:
+#     instrumentation.opentelemetry.io/inject-java: "true"      (Spring Boot: Orders, Carts, UI)
+#     instrumentation.opentelemetry.io/inject-nodejs: "true"    (Checkout)

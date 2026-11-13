@@ -1,0 +1,31 @@
+# Replaces 02: CPU + memory, plus tuned scaling speed. HPA uses the metric that asks for the MOST replicas.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: php-apache
+  namespace: careconnect
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: php-apache
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: { type: Utilization, averageUtilization: 50 }
+    - type: Resource
+      resource:
+        name: memory
+        target: { type: Utilization, averageUtilization: 80 }
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - { type: Percent, value: 100, periodSeconds: 15 }   # may double every 15s
+    scaleDown:
+      stabilizationWindowSeconds: 120                         # wait 2 min of low load (default 5 min)
+      policies:
+        - { type: Pods, value: 1, periodSeconds: 30 }         # remove at most 1 pod per 30s

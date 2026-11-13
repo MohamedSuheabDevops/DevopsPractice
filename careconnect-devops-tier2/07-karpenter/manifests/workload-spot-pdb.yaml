@@ -1,0 +1,41 @@
+# A spot-friendly workload: spread across nodes/AZs, protected by a PodDisruptionBudget, graceful shutdown.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: appointment-spot
+  namespace: careconnect
+spec:
+  replicas: 4
+  selector:
+    matchLabels: { app: appointment-spot }
+  template:
+    metadata:
+      labels: { app: appointment-spot }
+    spec:
+      nodeSelector:
+        capacity: spot                               # lands only on nodes from the spot NodePool
+      terminationGracePeriodSeconds: 30              # must finish well inside the 2-minute spot warning
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels: { app: appointment-spot }
+      containers:
+        - name: app
+          image: <dockerhub-user>/careconnect-demo:1.0.0
+          env: [{ name: SERVICE_NAME, value: appointment-spot }]
+          ports: [{ containerPort: 8000 }]
+          resources:
+            requests: { cpu: 250m, memory: 128Mi }   # Karpenter sizes nodes from REQUESTS
+          readinessProbe: { httpGet: { path: /health, port: 8000 } }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: appointment-spot
+  namespace: careconnect
+spec:
+  minAvailable: 75%                                  # never evict so many pods that fewer than 3 of 4 stay up
+  selector:
+    matchLabels: { app: appointment-spot }

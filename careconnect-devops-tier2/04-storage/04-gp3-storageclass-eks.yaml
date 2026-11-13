@@ -1,0 +1,15 @@
+# EKS ONLY (needs the EBS CSI driver from 02-eks-addons).
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: gp3
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: ebs.csi.aws.com
+parameters:
+  type: gp3
+  encrypted: "true"
+  fsType: ext4
+volumeBindingMode: WaitForFirstConsumer     # create the volume in the AZ where the pod is scheduled
+allowVolumeExpansion: true                  # PVC size can be increased later
+reclaimPolicy: Delete                       # Retain for databases you cannot lose

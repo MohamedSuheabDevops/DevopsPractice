@@ -1,0 +1,25 @@
+# HTTPS needs: a domain you own + an ACM certificate (DNS-validated) in the SAME region as the ALB.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: careconnect-alb-https
+  namespace: careconnect
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"             # HTTP -> HTTPS redirect
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:<ACCOUNT_ID>:certificate/<CERT_ID>
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS13-1-2-2021-06
+    alb.ingress.kubernetes.io/group.name: careconnect         # share ONE ALB across many Ingresses (saves money)
+spec:
+  ingressClassName: alb
+  rules:
+    - host: app.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: appointment-service, port: { number: 80 } }

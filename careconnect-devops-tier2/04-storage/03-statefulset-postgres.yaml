@@ -1,0 +1,42 @@
+# The Catalog-style database pattern: StatefulSet + volumeClaimTemplates.
+apiVersion: v1
+kind: Secret
+metadata: { name: pg-secret, namespace: careconnect }
+stringData:
+  POSTGRES_PASSWORD: change-me
+---
+apiVersion: v1
+kind: Service
+metadata: { name: pg, namespace: careconnect }
+spec:
+  clusterIP: None
+  selector: { app: pg }
+  ports: [{ port: 5432 }]
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: { name: pg, namespace: careconnect }
+spec:
+  serviceName: pg
+  replicas: 1
+  selector: { matchLabels: { app: pg } }
+  template:
+    metadata: { labels: { app: pg } }
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          envFrom: [{ secretRef: { name: pg-secret } }]
+          env:
+            - { name: PGDATA, value: /var/lib/postgresql/data/pgdata }   # subdir avoids lost+found issues on EBS
+          ports: [{ containerPort: 5432 }]
+          volumeMounts:
+            - { name: data, mountPath: /var/lib/postgresql/data }
+          readinessProbe:
+            exec: { command: ["pg_isready", "-U", "postgres"] }
+            periodSeconds: 5
+  volumeClaimTemplates:
+    - metadata: { name: data }
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources: { requests: { storage: 500Mi } }

@@ -1,0 +1,23 @@
+# Host-based routing. Test without DNS: curl -H "Host: patients.local" http://localhost/health
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: careconnect-hosts
+  namespace: careconnect
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: patients.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: patient-service, port: { number: 80 } }
+    - host: appointments.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: appointment-service, port: { number: 80 } }

@@ -1,0 +1,33 @@
+# FREE local lab: fake apps -> OpenTelemetry Collector -> Jaeger UI
+# Run:  docker compose up -d     Then open http://localhost:16686
+services:
+  jaeger:
+    image: jaegertracing/all-in-one:1.62.0
+    ports:
+      - "16686:16686"         # Jaeger UI
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.115.1
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol/config.yaml:ro
+    depends_on:
+      - jaeger
+
+  # fake "checkout" service: real business traces
+  checkout:
+    image: ghcr.io/open-telemetry/opentelemetry-collector-contrib/telemetrygen:v0.115.0
+    command: ["traces", "--otlp-endpoint=otel-collector:4317", "--otlp-insecure",
+              "--service=checkout", "--rate=5", "--duration=10m"]
+    depends_on:
+      - otel-collector
+
+  # fake health-check traffic: noisy, useless, expensive. The collector will DROP these.
+  health-probe:
+    image: ghcr.io/open-telemetry/opentelemetry-collector-contrib/telemetrygen:v0.115.0
+    command: ["traces", "--otlp-endpoint=otel-collector:4317", "--otlp-insecure",
+              "--service=health-probe", "--rate=20", "--duration=10m"]
+    depends_on:
+      - otel-collector

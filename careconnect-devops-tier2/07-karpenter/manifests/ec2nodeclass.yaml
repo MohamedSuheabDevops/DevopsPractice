@@ -1,0 +1,21 @@
+# REFERENCE (EKS + Karpenter installed). API version karpenter.k8s.aws/v1. Verify fields against the docs for your Karpenter version.
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: default
+spec:
+  role: careconnect-eks-karpenter-node          # IAM role (instance profile is created for you)
+  amiSelectorTerms:
+    - alias: al2023@latest                      # prod: pin a version, e.g. al2023@v20250101
+  subnetSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: careconnect-eks # tag your PRIVATE subnets with this
+  securityGroupSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: careconnect-eks # tag the node security group
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 30Gi
+        volumeType: gp3
+        encrypted: true
