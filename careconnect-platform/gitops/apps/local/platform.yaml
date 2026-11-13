@@ -1,0 +1,21 @@
+# Local datastores (Postgres + Redis) as plain manifests, managed by ArgoCD too.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: careconnect-platform-local
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/<your-user>/careconnect-platform.git
+    targetRevision: main
+    path: k8s/platform/local
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: careconnect
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

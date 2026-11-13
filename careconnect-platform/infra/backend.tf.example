@@ -1,0 +1,7 @@
+# Remote state (S3 + DynamoDB lock). Copy into a stack folder as backend.tf and run:
+#   terraform init -backend-config="bucket=<your-state-bucket>" -backend-config="key=careconnect/<stack>/terraform.tfstate" \
+#                  -backend-config="region=us-east-1" -backend-config="dynamodb_table=<lock-table>" -backend-config="encrypt=true"
+# Bootstrap the bucket/table with Tier 1: 05-terraform/04-remote-backend-bootstrap
+terraform {
+  backend "s3" {}
+}

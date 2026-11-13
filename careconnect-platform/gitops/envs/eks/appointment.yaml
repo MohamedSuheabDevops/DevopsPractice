@@ -1,0 +1,22 @@
+# EKS (ALB). With no domain: path routing on the ALB DNS name.  Set 'host' + certificate annotations for HTTPS (Tier 3 kit).
+image:
+  repository: <dockerhub-user>/careconnect-service
+  tag: "1.0.0"
+  pullPolicy: IfNotPresent
+replicaCount: 2
+env:
+  SERVICE_NAME: appointment-service
+ingress:
+  enabled: true
+  className: alb
+  path: /appointments
+  host: ""
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+    alb.ingress.kubernetes.io/group.name: careconnect          # all three services share ONE ALB
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6

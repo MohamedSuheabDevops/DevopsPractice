@@ -1,0 +1,35 @@
+# One Application per microservice, generated from a list. Add a service = add a list item + a values file.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: careconnect-local
+  namespace: argocd
+spec:
+  generators:
+    - list:
+        elements:
+          - service: patient
+          - service: appointment
+          - service: doctor
+  template:
+    metadata:
+      name: 'careconnect-{{service}}-local'
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/<your-user>/careconnect-platform.git
+        targetRevision: main
+        path: charts/careconnect-service
+        helm:
+          releaseName: '{{service}}'
+          valueFiles:
+            - ../../gitops/envs/local/{{service}}.yaml
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: careconnect
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true

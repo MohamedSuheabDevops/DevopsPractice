@@ -1,0 +1,45 @@
+# Manual promotion: roll a version that is already running locally out to EKS, through a PULL REQUEST (review gate).
+# Run it in GitHub: Actions > promote > Run workflow. Needs: Settings > Actions > General > "Allow GitHub Actions to create pull requests".
+name: promote
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to promote, without the v (e.g. 1.0.1)"
+        required: true
+      environment:
+        description: "Target environment folder under gitops/envs"
+        required: true
+        default: eks
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Edit values
+        run: |
+          for svc in patient appointment doctor; do
+            F=gitops/envs/${{ inputs.environment }}/$svc.yaml
+            yq -i ".image.repository = \"${{ secrets.DOCKERHUB_USERNAME }}/careconnect-service\"" $F
+            yq -i ".image.tag = \"${{ inputs.version }}\"" $F
+          done
+      - name: Open pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          BRANCH="promote/${{ inputs.environment }}-${{ inputs.version }}"
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add gitops/envs/${{ inputs.environment }}
+          git commit -m "promote: ${{ inputs.version }} to ${{ inputs.environment }}"
+          git push origin "$BRANCH"
+          gh pr create --base main --head "$BRANCH" \
+            --title "Promote ${{ inputs.version }} to ${{ inputs.environment }}" \
+            --body "Automated promotion. Review the diff, check the Helm lint job, then merge. ArgoCD deploys on merge."

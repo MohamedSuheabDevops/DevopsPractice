@@ -1,0 +1,5 @@
+Installed {{ .Chart.Name }} as release "{{ .Release.Name }}" in namespace "{{ .Release.Namespace }}".
+
+Try it:
+  kubectl port-forward svc/{{ include "careconnect-service.fullname" . }} 9000:{{ .Values.service.port }} -n {{ .Release.Namespace }}
+  curl http://localhost:9000/health

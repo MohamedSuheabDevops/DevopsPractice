@@ -1,0 +1,7 @@
+.git
+.github
+docs
+infra
+charts
+gitops
+k8s

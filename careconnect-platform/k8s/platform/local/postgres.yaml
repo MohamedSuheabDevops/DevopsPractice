@@ -1,0 +1,45 @@
+# DEV ONLY. The password below is a placeholder for local practice. In EKS use AWS RDS + Secrets Manager.
+apiVersion: v1
+kind: Secret
+metadata: { name: postgres-secret, namespace: careconnect }
+stringData:
+  POSTGRES_USER: careconnect
+  POSTGRES_PASSWORD: dev-only-change-me
+  POSTGRES_DB: careconnect
+---
+apiVersion: v1
+kind: Service
+metadata: { name: postgres, namespace: careconnect }
+spec:
+  clusterIP: None
+  selector: { app: postgres }
+  ports: [{ port: 5432 }]
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: { name: postgres, namespace: careconnect }
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector: { matchLabels: { app: postgres } }
+  template:
+    metadata: { labels: { app: postgres } }
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          envFrom: [{ secretRef: { name: postgres-secret } }]
+          env: [{ name: PGDATA, value: /var/lib/postgresql/data/pgdata }]
+          ports: [{ containerPort: 5432 }]
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 256Mi }
+          readinessProbe:
+            exec: { command: ["pg_isready", "-U", "careconnect"] }
+            periodSeconds: 5
+          volumeMounts: [{ name: data, mountPath: /var/lib/postgresql/data }]
+  volumeClaimTemplates:
+    - metadata: { name: data }
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources: { requests: { storage: 500Mi } }

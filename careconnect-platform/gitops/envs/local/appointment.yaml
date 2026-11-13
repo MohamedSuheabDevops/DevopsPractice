@@ -1,0 +1,10 @@
+# kind cluster. Image is loaded into kind with: kind load docker-image careconnect-service:dev --name cc
+# The release workflow rewrites image.repository and image.tag below (and commits them).
+image:
+  repository: careconnect-service
+  tag: dev
+  pullPolicy: IfNotPresent
+replicaCount: 2
+env:
+  SERVICE_NAME: appointment-service
+  DEPENDENCIES: "postgres:5432,redis:6379"   # /health stays 503 until the datastores answer

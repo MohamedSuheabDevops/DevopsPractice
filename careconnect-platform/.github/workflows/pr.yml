@@ -1,0 +1,80 @@
+# Runs on every pull request. No cloud credentials needed. Everything here is free.
+name: pr-checks
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Unit tests
+        working-directory: apps/careconnect-service
+        run: python -m unittest -v
+
+  dockerfile-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: apps/careconnect-service/Dockerfile
+          failure-threshold: warning
+
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build image (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/careconnect-service
+          push: false
+          tags: careconnect-service:pr
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  helm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      - name: Lint chart for every service and environment
+        run: |
+          for env in local eks; do
+            for svc in patient appointment doctor; do
+              helm lint charts/careconnect-service -f gitops/envs/$env/$svc.yaml
+              helm template $svc charts/careconnect-service -f gitops/envs/$env/$svc.yaml > /dev/null
+            done
+          done
+
+  terraform:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        stack: [00-local-floci, 10-eks, 20-addons, 30-data]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - name: fmt
+        # Run `terraform fmt -recursive infra` locally once, commit, then delete the next line to make this check strict.
+        continue-on-error: true
+        run: terraform fmt -check -recursive
+        working-directory: infra
+      - name: placeholder for the downloaded IAM policy (20-addons reads it with file())
+        if: matrix.stack == '20-addons'
+        run: echo '{}' > infra/stacks/20-addons/iam_policy.json
+      - name: init and validate
+        working-directory: infra/stacks/${{ matrix.stack }}
+        run: |
+          terraform init -backend=false -input=false
+          terraform validate
