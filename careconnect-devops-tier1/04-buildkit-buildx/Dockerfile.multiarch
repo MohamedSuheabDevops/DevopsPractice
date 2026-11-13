@@ -1,0 +1,16 @@
+# Cross-compiles Go for any target platform WITHOUT emulation (fast).
+# BUILDPLATFORM = machine doing the build, TARGETOS/TARGETARCH = what we're building for.
+FROM --platform=$BUILDPLATFORM golang:1.22-alpine AS build
+ARG TARGETOS
+ARG TARGETARCH
+WORKDIR /src
+COPY go.mod ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags="-s -w" -o /out/app .
+
+FROM scratch
+COPY --from=build /out/app /app
+USER 65532:65532
+EXPOSE 8000
+ENTRYPOINT ["/app"]

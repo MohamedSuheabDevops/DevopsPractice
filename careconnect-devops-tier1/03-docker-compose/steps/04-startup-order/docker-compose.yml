@@ -1,0 +1,81 @@
+# STEP 4 - Startup order: depends_on + conditions
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: careconnect
+      POSTGRES_PASSWORD: changeme
+      POSTGRES_DB: careconnect
+    volumes: [pgdata:/var/lib/postgresql/data]
+    networks: [backend]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U careconnect -d careconnect"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    networks: [backend]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # One-shot job: runs, creates the table, exits with code 0
+  db-migrate:
+    image: postgres:16-alpine
+    entrypoint: ["psql"]
+    command:
+      - "-h"
+      - "postgres"
+      - "-U"
+      - "careconnect"
+      - "-d"
+      - "careconnect"
+      - "-c"
+      - "CREATE TABLE IF NOT EXISTS appointments (id serial PRIMARY KEY, patient text, slot timestamp);"
+    environment:
+      PGPASSWORD: changeme
+    networks: [backend]
+    depends_on:
+      postgres:
+        condition: service_healthy          # wait until pg_isready passes
+    restart: "no"
+
+  appointment-service:
+    build: ../../services/app
+    environment:
+      SERVICE_NAME: appointment-service
+      DEPENDENCIES: "postgres:5432,redis:6379"
+    networks: [frontend, backend]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      db-migrate:
+        condition: service_completed_successfully   # wait for job to exit 0
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  gateway:
+    image: nginx:1.27-alpine
+    ports: ["8080:80"]
+    volumes:
+      - ../../gateway/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks: [frontend]
+    depends_on:
+      appointment-service:
+        condition: service_healthy
+
+networks:
+  frontend:
+  backend:
+
+volumes:
+  pgdata:

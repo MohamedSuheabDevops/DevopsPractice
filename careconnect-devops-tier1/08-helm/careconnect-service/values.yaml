@@ -1,0 +1,32 @@
+# Defaults. Override per service (services/*.yaml) and per environment (values-*.yaml).
+replicaCount: 1
+
+image:
+  repository: careconnect-service
+  tag: ""                 # empty = use Chart appVersion
+  pullPolicy: IfNotPresent
+
+nameOverride: ""
+
+env:
+  SERVICE_NAME: careconnect-service
+  DEPENDENCIES: ""
+
+secretName: ""            # name of an existing Secret to load as env vars (optional)
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8000
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 32Mi
+  limits:
+    cpu: 200m
+    memory: 64Mi
+
+probes:
+  enabled: true
+  path: /health

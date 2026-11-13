@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: doctor-config
+  namespace: careconnect
+data:
+  SERVICE_NAME: doctor-service           # key/value pairs
+  DEPENDENCIES: ""
+  app.properties: |                      # a whole file
+    log.level=info
+    clinic.name=CareConnect Central
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: doctor-service
+  namespace: careconnect
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: doctor-service }
+  template:
+    metadata:
+      labels: { app: doctor-service }
+    spec:
+      containers:
+        - name: app
+          image: careconnect-service:1.0.0
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: doctor-config          # all keys become env vars
+          volumeMounts:
+            - name: cfg
+              mountPath: /etc/config         # app.properties appears as a file
+      volumes:
+        - name: cfg
+          configMap:
+            name: doctor-config
+            items:
+              - key: app.properties
+                path: app.properties

@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: patient-pod
+  namespace: careconnect
+  labels:
+    app: patient-service
+    tier: backend
+  annotations:
+    description: "A bare Pod: no self-healing. Delete it and it is gone."
+spec:
+  containers:
+    - name: app
+      image: careconnect-service:1.0.0
+      imagePullPolicy: IfNotPresent       # image was loaded into kind, not pulled
+      ports:
+        - containerPort: 8000
+      env:
+        - name: SERVICE_NAME
+          value: patient-service

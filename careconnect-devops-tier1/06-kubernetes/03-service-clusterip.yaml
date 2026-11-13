@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: appointment-service
+  namespace: careconnect
+spec:
+  type: ClusterIP                 # internal only (default)
+  selector:
+    app: appointment-service      # sends traffic to pods with this label
+  ports:
+    - port: 80                    # service port
+      targetPort: 8000            # container port

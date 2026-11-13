@@ -1,0 +1,74 @@
+# STEP 5 - Profiles, links, aliases
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: careconnect
+      POSTGRES_PASSWORD: changeme
+      POSTGRES_DB: careconnect
+    networks:
+      backend:
+        aliases:
+          - db                  # other containers can reach it as "postgres" OR "db"
+          - appointments-db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U careconnect"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  appointment-service:
+    build: ../../services/app
+    environment:
+      SERVICE_NAME: appointment-service
+      DEPENDENCIES: "db:5432"             # uses the alias
+    networks: [frontend, backend]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  gateway:
+    image: nginx:1.27-alpine
+    ports: ["8080:80"]
+    volumes:
+      - ../../gateway/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks: [frontend]
+    links:
+      - "appointment-service:appts"       # legacy: extra hostname "appts" (not needed on user-defined networks)
+
+  # ---- optional services: only start with --profile ----
+  adminer:
+    image: adminer:4
+    profiles: ["tools"]
+    ports: ["8081:8080"]
+    networks: [backend]
+
+  seed-data:
+    image: postgres:16-alpine
+    profiles: ["seed"]
+    entrypoint: ["psql"]
+    command:
+      - "-h"
+      - "db"
+      - "-U"
+      - "careconnect"
+      - "-d"
+      - "careconnect"
+      - "-c"
+      - "CREATE TABLE IF NOT EXISTS appointments (id serial PRIMARY KEY, patient text, slot timestamp); INSERT INTO appointments (patient, slot) VALUES ('Asha', now()), ('Ravi', now());"
+    environment:
+      PGPASSWORD: changeme
+    networks: [backend]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  debug:
+    image: busybox:1.36
+    profiles: ["debug"]
+    command: ["sleep", "3600"]
+    networks: [frontend, backend]
+
+networks:
+  frontend:
+  backend:

@@ -1,0 +1,38 @@
+# EKS ONLY. The ServiceAccount is linked to an IAM role by EKS Pod Identity (no keys, no IRSA annotations).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: catalog-sa
+  namespace: careconnect
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalog-service
+  namespace: careconnect
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: catalog-service }
+  template:
+    metadata:
+      labels: { app: catalog-service }
+    spec:
+      serviceAccountName: catalog-sa
+      containers:
+        - name: app
+          image: careconnect-service:1.0.0
+          volumeMounts:
+            - name: secrets
+              mountPath: /mnt/secrets
+              readOnly: true
+          envFrom:
+            - secretRef:
+                name: catalog-db           # created by secretObjects above
+      volumes:
+        - name: secrets
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: catalog-db-secret

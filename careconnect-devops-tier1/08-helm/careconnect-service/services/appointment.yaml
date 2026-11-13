@@ -1,0 +1,5 @@
+image:
+  tag: "1.0.0"            # CI/CD updates this line (Section 21)
+env:
+  SERVICE_NAME: appointment-service
+  DEPENDENCIES: ""        # in a cluster with Postgres: "postgres:5432"

@@ -1,0 +1,7 @@
+# Single stage: ships the whole Go toolchain. Compare the size with the multistage one.
+FROM golang:1.22-alpine
+WORKDIR /src
+COPY . .
+RUN go build -o /app .
+EXPOSE 8000
+CMD ["/app"]

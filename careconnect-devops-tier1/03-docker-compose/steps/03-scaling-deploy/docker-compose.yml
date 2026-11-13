@@ -1,0 +1,29 @@
+# STEP 3 - Scaling with deploy
+# Rules for scaling: no container_name, no fixed host port on the scaled service.
+services:
+  appointment-service:
+    build: ../../services/app
+    environment:
+      SERVICE_NAME: appointment-service
+    networks: [frontend]
+    deploy:
+      replicas: 3                       # start 3 containers
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 64M
+      restart_policy:
+        condition: on-failure
+
+  gateway:
+    image: nginx:1.27-alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ../../gateway/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks: [frontend]
+    depends_on:
+      - appointment-service
+
+networks:
+  frontend:

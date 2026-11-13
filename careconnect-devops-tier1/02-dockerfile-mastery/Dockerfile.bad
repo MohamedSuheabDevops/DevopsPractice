@@ -1,0 +1,7 @@
+# ANTI-PATTERN EXAMPLE. Find every problem (answers in NOTES.md)
+FROM python:latest
+COPY . /app
+WORKDIR /app
+RUN pip install -r requirements.txt
+ENV SERVICE_NAME=python-service
+CMD python app.py

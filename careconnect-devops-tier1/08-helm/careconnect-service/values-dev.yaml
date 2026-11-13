@@ -1,0 +1,5 @@
+replicaCount: 1
+image:
+  pullPolicy: IfNotPresent
+env:
+  LOG_LEVEL: debug

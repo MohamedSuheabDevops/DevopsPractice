@@ -1,0 +1,6 @@
+apiVersion: v2
+name: careconnect-service
+description: Generic chart for CareConnect microservices (one chart, one values file per service)
+type: application
+version: 0.1.0        # chart version: bump when the CHART changes
+appVersion: "1.0.0"   # app version: default image tag

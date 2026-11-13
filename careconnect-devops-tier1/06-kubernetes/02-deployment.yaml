@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: appointment-service
+  namespace: careconnect
+  labels:
+    app: appointment-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: appointment-service        # must match template labels
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1                     # at most 1 extra pod during update
+      maxUnavailable: 0               # never drop below desired count
+  template:
+    metadata:
+      labels:
+        app: appointment-service
+        tier: backend
+    spec:
+      containers:
+        - name: app
+          image: careconnect-service:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          env:
+            - name: SERVICE_NAME
+              value: appointment-service
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 64Mi
+          readinessProbe:
+            httpGet: { path: /health, port: 8000 }
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /health, port: 8000 }
+            initialDelaySeconds: 10
+            periodSeconds: 10

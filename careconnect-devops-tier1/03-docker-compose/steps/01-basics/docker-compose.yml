@@ -1,0 +1,17 @@
+# STEP 1 - Compose basics: build, image, ports, environment, depends_on
+services:
+  patient-service:
+    build: ../../services/app          # builds the Dockerfile in that folder
+    environment:
+      SERVICE_NAME: patient-service
+    expose:
+      - "8000"                         # documentation only; reachable inside the network
+
+  gateway:
+    image: nginx:1.27-alpine
+    ports:
+      - "8080:80"                      # HOST:CONTAINER
+    volumes:
+      - ../../gateway/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - patient-service
