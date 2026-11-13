@@ -1,0 +1,17 @@
+# Cross-compiles the Go service for any target platform without slow emulation.
+# BUILDPLATFORM = the machine doing the build. TARGETOS/TARGETARCH = what you are building for.
+FROM --platform=$BUILDPLATFORM golang:1.22-alpine AS build
+ARG TARGETOS
+ARG TARGETARCH
+WORKDIR /src
+COPY go.mod ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags="-s -w" -o /out/doctors .
+
+FROM alpine:3.20
+RUN adduser -D -u 10001 app
+COPY --from=build /out/doctors /usr/local/bin/doctors
+USER 10001
+EXPOSE 8080
+ENTRYPOINT ["/usr/local/bin/doctors"]

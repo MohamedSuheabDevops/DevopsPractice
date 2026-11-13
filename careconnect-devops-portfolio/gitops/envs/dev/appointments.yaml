@@ -1,0 +1,11 @@
+# appointments (Spring Boot) on the local kind cluster.
+# The release workflow rewrites image.repository and image.tag below and commits them. ArgoCD then deploys.
+image:
+  repository: careconnect-appointments
+  tag: dev
+  pullPolicy: IfNotPresent
+replicaCount: 2
+env:
+  SERVICE_NAME: appointments
+  AWS_REGION: us-east-1
+  DYNAMODB_TABLE: careconnect-appointments

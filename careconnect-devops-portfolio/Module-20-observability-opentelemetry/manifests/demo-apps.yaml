@@ -1,0 +1,58 @@
+# booking (Node.js) calls appointments (Java). Both are traced WITHOUT any code change:
+# the OpenTelemetry operator injects an agent because of the annotation on the pod template.
+# EDIT the images (<dockerhub-user>). Apply collector.yaml and instrumentation.yaml FIRST.
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: appointments, namespace: careconnect }
+spec:
+  replicas: 2
+  selector: { matchLabels: { app: appointments } }
+  template:
+    metadata:
+      labels: { app: appointments }
+      annotations:
+        instrumentation.opentelemetry.io/inject-java: "true"
+    spec:
+      containers:
+        - name: appointments
+          image: <dockerhub-user>/careconnect-appointments:1.0.0
+          env: [{ name: SERVICE_NAME, value: appointments }]
+          ports: [{ containerPort: 8080 }]
+          resources: { requests: { cpu: 100m, memory: 384Mi } }
+          readinessProbe: { httpGet: { path: /health, port: 8080 }, initialDelaySeconds: 25 }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: appointments, namespace: careconnect }
+spec:
+  selector: { app: appointments }
+  ports: [{ port: 80, targetPort: 8080 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: booking, namespace: careconnect }
+spec:
+  replicas: 2
+  selector: { matchLabels: { app: booking } }
+  template:
+    metadata:
+      labels: { app: booking }
+      annotations:
+        instrumentation.opentelemetry.io/inject-nodejs: "true"
+    spec:
+      containers:
+        - name: booking
+          image: <dockerhub-user>/careconnect-booking:1.0.0
+          env:
+            - { name: SERVICE_NAME, value: booking }
+            - { name: BACKEND_URL, value: "http://appointments" }
+          ports: [{ containerPort: 8080 }]
+          resources: { requests: { cpu: 50m, memory: 64Mi } }
+          readinessProbe: { httpGet: { path: /health, port: 8080 } }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: booking, namespace: careconnect }
+spec:
+  selector: { app: booking }
+  ports: [{ port: 80, targetPort: 8080 }]

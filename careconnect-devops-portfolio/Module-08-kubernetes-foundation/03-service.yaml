@@ -1,0 +1,12 @@
+# ClusterIP: a stable internal address that sends traffic to ready pods with the matching label.
+apiVersion: v1
+kind: Service
+metadata:
+  name: appointments
+  namespace: careconnect
+spec:
+  type: ClusterIP
+  selector: { app: appointments }
+  ports:
+    - port: 80
+      targetPort: 8080

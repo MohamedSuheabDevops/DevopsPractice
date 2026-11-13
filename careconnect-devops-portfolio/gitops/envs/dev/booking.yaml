@@ -1,0 +1,12 @@
+# booking (Node.js) on the local kind cluster.
+# The release workflow rewrites image.repository and image.tag below and commits them. ArgoCD then deploys.
+image:
+  repository: careconnect-booking
+  tag: dev
+  pullPolicy: IfNotPresent
+replicaCount: 2
+env:
+  SERVICE_NAME: booking
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+  BACKEND_URL: http://appointments

@@ -1,0 +1,53 @@
+replicaCount: 2
+
+image:
+  repository: careconnect-service
+  tag: ""                       # empty = Chart appVersion
+  pullPolicy: IfNotPresent
+
+nameOverride: ""
+
+env:
+  SERVICE_NAME: careconnect-service
+
+secretName: ""                  # existing Secret loaded as env vars (e.g. synced from Secrets Manager)
+
+serviceAccount:
+  create: true
+  name: ""                      # default = release name. Pod Identity associates an IAM role with this name.
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+ingress:
+  enabled: false
+  className: alb
+  host: ""                      # empty = match any host (use path routing)
+  path: /
+  pathType: Prefix
+  annotations: {}
+
+resources:
+  requests: { cpu: 50m, memory: 32Mi }
+  limits:   { cpu: 200m, memory: 64Mi }
+
+probes:
+  enabled: true
+  path: /health
+
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 60
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# spread replicas across zones/nodes (helps with spot interruptions and AZ failures)
+topologySpread: true
+
+nodeSelector: {}

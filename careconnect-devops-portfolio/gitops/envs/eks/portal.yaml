@@ -1,0 +1,20 @@
+# portal (Spring Boot) on EKS behind one shared ALB, routed by path. Replace <dockerhub-user>.
+image:
+  repository: <dockerhub-user>/careconnect-portal
+  tag: "1.0.0"
+  pullPolicy: IfNotPresent
+env:
+  SERVICE_NAME: portal
+ingress:
+  enabled: true
+  className: alb
+  path: /portal
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+    alb.ingress.kubernetes.io/group.name: careconnect
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6

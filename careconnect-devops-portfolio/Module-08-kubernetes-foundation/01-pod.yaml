@@ -1,0 +1,20 @@
+# A bare Pod. If you delete it, it is gone: nothing recreates it.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: portal-pod
+  namespace: careconnect
+  labels:
+    app: portal
+    tier: frontend
+  annotations:
+    note: "Bare pod, no self-healing"
+spec:
+  containers:
+    - name: portal
+      image: careconnect-portal:dev
+      imagePullPolicy: IfNotPresent
+      ports:
+        - containerPort: 8080
+      env:
+        - { name: SERVICE_NAME, value: portal }

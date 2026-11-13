@@ -1,0 +1,19 @@
+# secrets and local files
+.env
+*.pem
+*.key
+kubeconfig*
+# terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!dev.tfvars
+!prod.tfvars
+tf.plan
+crash.log
+# java / node / misc
+target/
+node_modules/
+*.tgz
+.DS_Store

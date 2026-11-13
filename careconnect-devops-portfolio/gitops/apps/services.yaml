@@ -1,0 +1,38 @@
+# One ArgoCD Application per CareConnect service, generated from this list.
+# To deploy to EKS instead of kind, change "dev" to "eks" in the valueFiles line below.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: careconnect-services
+  namespace: argocd
+spec:
+  generators:
+    - list:
+        elements:
+          - service: portal
+          - service: appointments
+          - service: billing
+          - service: doctors
+          - service: booking
+  template:
+    metadata:
+      name: 'careconnect-{{service}}'
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/<your-user>/careconnect-devops-portfolio.git
+        targetRevision: main
+        path: charts/careconnect-service
+        helm:
+          releaseName: '{{service}}'
+          valueFiles:
+            - ../../gitops/envs/dev/{{service}}.yaml
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: careconnect
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true

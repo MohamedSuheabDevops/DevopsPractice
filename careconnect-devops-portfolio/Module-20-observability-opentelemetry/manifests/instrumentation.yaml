@@ -1,0 +1,19 @@
+# Tells the operator HOW to inject agents. Pods opt in with an annotation.
+apiVersion: opentelemetry.io/v1alpha1
+kind: Instrumentation
+metadata:
+  name: careconnect
+  namespace: careconnect
+spec:
+  exporter:
+    endpoint: http://adot-collector.careconnect:4318      # the Service the operator creates for the collector
+  propagators: [tracecontext, baggage, xray]
+  sampler:
+    type: parentbased_traceidratio
+    argument: "1"                                         # 100% while learning. Production: 0.05 - 0.25
+  nodejs:
+    env:
+      - { name: OTEL_EXPORTER_OTLP_PROTOCOL, value: http/protobuf }
+  java:
+    env:
+      - { name: OTEL_EXPORTER_OTLP_PROTOCOL, value: http/protobuf }

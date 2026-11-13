@@ -1,0 +1,38 @@
+# EKS ONLY. The ServiceAccount is linked to an IAM role by EKS Pod Identity (no keys, no IRSA annotations).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: billing-sa
+  namespace: careconnect
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: billing
+  namespace: careconnect
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: billing }
+  template:
+    metadata:
+      labels: { app: billing }
+    spec:
+      serviceAccountName: billing-sa
+      containers:
+        - name: app
+          image: <dockerhub-user>/careconnect-billing:1.0.0
+          volumeMounts:
+            - name: secrets
+              mountPath: /mnt/secrets
+              readOnly: true
+          envFrom:
+            - secretRef:
+                name: billing-db           # created by secretObjects above
+      volumes:
+        - name: secrets
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: billing-db-secret

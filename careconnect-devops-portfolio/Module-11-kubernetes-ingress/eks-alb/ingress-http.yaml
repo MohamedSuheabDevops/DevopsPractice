@@ -1,0 +1,17 @@
+# AWS Application Load Balancer through the AWS Load Balancer Controller (Module-13).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: careconnect-alb
+  namespace: careconnect
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip              # pods registered directly as targets
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+spec:
+  ingressClassName: alb
+  rules:
+    - http:
+        paths:
+          - { path: /portal,  pathType: Prefix, backend: { service: { name: portal,  port: { number: 80 } } } }
+          - { path: /doctors, pathType: Prefix, backend: { service: { name: doctors, port: { number: 80 } } } }

@@ -1,0 +1,7 @@
+# A small local cluster: 1 control plane + 2 workers. (Remove one worker if your machine is slow.)
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane
+  - role: worker
+  - role: worker

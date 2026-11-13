@@ -1,0 +1,46 @@
+# portal and doctors with a Service each (images loaded into kind).
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: portal, namespace: careconnect }
+spec:
+  replicas: 2
+  selector: { matchLabels: { app: portal } }
+  template:
+    metadata: { labels: { app: portal } }
+    spec:
+      containers:
+        - name: portal
+          image: careconnect-portal:dev
+          imagePullPolicy: IfNotPresent
+          ports: [{ containerPort: 8080 }]
+          readinessProbe: { httpGet: { path: /health, port: 8080 }, initialDelaySeconds: 15 }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: portal, namespace: careconnect }
+spec:
+  selector: { app: portal }
+  ports: [{ port: 80, targetPort: 8080 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: doctors, namespace: careconnect }
+spec:
+  replicas: 2
+  selector: { matchLabels: { app: doctors } }
+  template:
+    metadata: { labels: { app: doctors } }
+    spec:
+      containers:
+        - name: doctors
+          image: careconnect-doctors:dev
+          imagePullPolicy: IfNotPresent
+          ports: [{ containerPort: 8080 }]
+          readinessProbe: { httpGet: { path: /health, port: 8080 } }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: doctors, namespace: careconnect }
+spec:
+  selector: { app: doctors }
+  ports: [{ port: 80, targetPort: 8080 }]

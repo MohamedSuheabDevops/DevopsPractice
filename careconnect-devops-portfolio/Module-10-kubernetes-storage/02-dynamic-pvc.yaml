@@ -1,0 +1,30 @@
+# DYNAMIC provisioning: PVC names a StorageClass, the provisioner creates the PV automatically.
+# kind ships a default StorageClass called "standard" (local-path provisioner).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: dynamic-pvc
+  namespace: careconnect
+spec:
+  accessModes: ["ReadWriteOnce"]
+  # storageClassName omitted -> uses the cluster default StorageClass
+  resources:
+    requests:
+      storage: 100Mi
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: writer-dynamic
+  namespace: careconnect
+spec:
+  containers:
+    - name: app
+      image: busybox:1.36
+      command: ["sh", "-c", "date >> /data/log.txt; sleep 3600"]
+      volumeMounts:
+        - { name: data, mountPath: /data }
+  volumes:
+    - name: data
+      persistentVolumeClaim:
+        claimName: dynamic-pvc

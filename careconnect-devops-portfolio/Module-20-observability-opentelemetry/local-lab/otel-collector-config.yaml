@@ -1,0 +1,41 @@
+# Pipeline: receivers -> processors -> exporters
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch: {}                       # group data into batches (cheaper, faster)
+
+  memory_limiter:                 # protect the collector from OOM
+    check_interval: 1s
+    limit_mib: 200
+
+  # COST OPTIMISATION: drop spans we never want (the course filters real /health spans; this lab filters a noisy service)
+  filter/drop-health:
+    error_mode: ignore
+    traces:
+      span:
+        - 'resource.attributes["service.name"] == "health-probe"'
+
+  # SAMPLING: keep only 50% of what's left (use a higher % for errors in real life: tail_sampling)
+  probabilistic_sampler:
+    sampling_percentage: 50
+
+exporters:
+  otlp/jaeger:
+    endpoint: jaeger:4317
+    tls:
+      insecure: true
+  debug:
+    verbosity: basic              # prints counts to the collector log
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, filter/drop-health, probabilistic_sampler, batch]
+      exporters: [otlp/jaeger, debug]

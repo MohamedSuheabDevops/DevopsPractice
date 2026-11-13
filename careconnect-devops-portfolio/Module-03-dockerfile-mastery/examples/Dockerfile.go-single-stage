@@ -1,0 +1,7 @@
+# For comparison only: ships the whole Go toolchain, so the image is large.
+FROM golang:1.22-alpine
+WORKDIR /src
+COPY . .
+RUN go build -o /doctors .
+EXPOSE 8080
+CMD ["/doctors"]

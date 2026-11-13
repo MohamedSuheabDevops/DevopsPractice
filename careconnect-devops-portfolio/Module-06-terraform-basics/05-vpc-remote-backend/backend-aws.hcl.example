@@ -1,0 +1,6 @@
+# Real AWS: copy to backend-aws.hcl and edit. Credentials come from your AWS profile / OIDC.
+bucket         = "<your-unique-state-bucket>"
+key            = "vpc/dev/terraform.tfstate"
+region         = "us-east-1"
+dynamodb_table = "careconnect-tf-locks"
+encrypt        = true

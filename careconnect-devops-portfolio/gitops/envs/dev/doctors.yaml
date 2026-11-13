@@ -1,0 +1,12 @@
+# doctors (Go) on the local kind cluster.
+# The release workflow rewrites image.repository and image.tag below and commits them. ArgoCD then deploys.
+image:
+  repository: careconnect-doctors
+  tag: dev
+  pullPolicy: IfNotPresent
+replicaCount: 2
+env:
+  SERVICE_NAME: doctors
+  DB_HOST: mariadb
+  DB_PORT: "3306"
+  DB_NAME: doctors

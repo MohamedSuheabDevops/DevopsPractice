@@ -1,0 +1,23 @@
+# doctors (Go) on EKS behind one shared ALB, routed by path. Replace <dockerhub-user>.
+image:
+  repository: <dockerhub-user>/careconnect-doctors
+  tag: "1.0.0"
+  pullPolicy: IfNotPresent
+env:
+  SERVICE_NAME: doctors
+  DB_HOST: mariadb
+  DB_PORT: "3306"
+  DB_NAME: doctors
+ingress:
+  enabled: true
+  className: alb
+  path: /doctors
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+    alb.ingress.kubernetes.io/group.name: careconnect
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6

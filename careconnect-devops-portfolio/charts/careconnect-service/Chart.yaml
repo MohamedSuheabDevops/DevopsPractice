@@ -1,0 +1,6 @@
+apiVersion: v2
+name: careconnect-service
+description: One reusable chart for all five CareConnect services (settings per service live in gitops/envs)
+type: application
+version: 0.3.0        # bump when the CHART changes
+appVersion: "1.0.0"   # app version: default image tag

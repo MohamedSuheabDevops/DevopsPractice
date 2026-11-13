@@ -1,0 +1,9 @@
+# portal (Spring Boot) on the local kind cluster.
+# The release workflow rewrites image.repository and image.tag below and commits them. ArgoCD then deploys.
+image:
+  repository: careconnect-portal
+  tag: dev
+  pullPolicy: IfNotPresent
+replicaCount: 2
+env:
+  SERVICE_NAME: portal

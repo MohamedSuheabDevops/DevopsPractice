@@ -1,0 +1,31 @@
+# Production-style spot workload: replicas, zone spread, PDB, fast graceful shutdown.
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: appointments-spot, namespace: careconnect }
+spec:
+  replicas: 4
+  selector: { matchLabels: { app: appointments-spot } }
+  template:
+    metadata: { labels: { app: appointments-spot } }
+    spec:
+      nodeSelector: { capacity: spot }
+      terminationGracePeriodSeconds: 30
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector: { matchLabels: { app: appointments-spot } }
+      containers:
+        - name: app
+          image: <dockerhub-user>/careconnect-appointments:1.0.0
+          env: [{ name: SERVICE_NAME, value: appointments-spot }]
+          ports: [{ containerPort: 8080 }]
+          resources: { requests: { cpu: 250m, memory: 256Mi } }
+          readinessProbe: { httpGet: { path: /health, port: 8080 }, initialDelaySeconds: 20 }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata: { name: appointments-spot, namespace: careconnect }
+spec:
+  minAvailable: 75%
+  selector: { matchLabels: { app: appointments-spot } }

@@ -1,0 +1,15 @@
+# Use with the Helm chart to put a service on your own domain over HTTPS.
+# helm upgrade --install portal charts/careconnect-service -n careconnect -f gitops/envs/eks/portal.yaml -f Module-16-custom-domain-https-OPTIONAL/values-https.yaml
+ingress:
+  enabled: true
+  className: alb
+  path: /
+  host: portal.<DOMAIN>
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/certificate-arn: <CERT_ARN>
+    alb.ingress.kubernetes.io/group.name: careconnect

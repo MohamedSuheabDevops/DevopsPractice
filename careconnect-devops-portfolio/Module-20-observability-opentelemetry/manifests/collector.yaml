@@ -1,0 +1,57 @@
+# EDIT: <AMP_REMOTE_WRITE_URL> (terraform output amp_remote_write_url) and the region if not us-east-1.
+apiVersion: opentelemetry.io/v1beta1
+kind: OpenTelemetryCollector
+metadata:
+  name: adot
+  namespace: careconnect
+spec:
+  mode: deployment
+  serviceAccount: adot-collector
+  config:
+    receivers:
+      otlp:
+        protocols:
+          grpc: { endpoint: 0.0.0.0:4317 }
+          http: { endpoint: 0.0.0.0:4318 }
+
+    processors:
+      memory_limiter:
+        check_interval: 1s
+        limit_percentage: 75
+        spike_limit_percentage: 20
+      filter/health:                              # COST: drop probe spans before they reach X-Ray (~85% savings in the course)
+        error_mode: ignore
+        traces:
+          span:
+            - 'attributes["http.target"] == "/health"'
+            - 'attributes["url.path"] == "/health"'
+      batch: {}
+
+    connectors:
+      spanmetrics: {}                             # turns spans into RED metrics (rate, errors, duration) automatically
+
+    extensions:
+      sigv4auth:
+        region: us-east-1
+        service: aps
+
+    exporters:
+      awsxray:
+        region: us-east-1
+      prometheusremotewrite:
+        endpoint: <AMP_REMOTE_WRITE_URL>
+        auth: { authenticator: sigv4auth }
+      debug:
+        verbosity: basic
+
+    service:
+      extensions: [sigv4auth]
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, filter/health, batch]
+          exporters: [awsxray, spanmetrics]
+        metrics:
+          receivers: [otlp, spanmetrics]
+          processors: [memory_limiter, batch]
+          exporters: [prometheusremotewrite]

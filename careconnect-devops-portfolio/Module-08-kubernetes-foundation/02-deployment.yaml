@@ -1,0 +1,36 @@
+# A Deployment keeps 3 copies running, replaces failed ones, and does rolling updates.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: appointments
+  namespace: careconnect
+  labels: { app: appointments }
+spec:
+  replicas: 3
+  selector:
+    matchLabels: { app: appointments }
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  template:
+    metadata:
+      labels: { app: appointments, tier: backend }
+    spec:
+      containers:
+        - name: appointments
+          image: careconnect-appointments:dev
+          imagePullPolicy: IfNotPresent
+          ports: [{ containerPort: 8080 }]
+          env:
+            - { name: SERVICE_NAME, value: appointments }
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits:   { cpu: 500m, memory: 512Mi }
+          readinessProbe:               # decides whether the pod receives traffic
+            httpGet: { path: /health, port: 8080 }
+            initialDelaySeconds: 15
+            periodSeconds: 5
+          livenessProbe:                # decides whether the pod is restarted
+            httpGet: { path: /health, port: 8080 }
+            initialDelaySeconds: 40
+            periodSeconds: 10

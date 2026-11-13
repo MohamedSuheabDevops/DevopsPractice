@@ -1,0 +1,145 @@
+# CareConnect on Docker Compose: gateway + 5 services + Postgres + MariaDB + Redis.
+# Run (from this folder):  cp .env.example .env && docker compose up -d --build
+services:
+  gateway:
+    image: nginx:1.27-alpine
+    ports: ["8080:80"]
+    volumes:
+      - ./gateway/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks: [frontend]
+    depends_on:
+      portal:       { condition: service_healthy }
+      appointments: { condition: service_healthy }
+      doctors:      { condition: service_healthy }
+      billing:      { condition: service_healthy }
+      booking:      { condition: service_healthy }
+    # links: a legacy way to add a hostname for another service. Shown for the course topic.
+    # On user-defined networks it is not needed because every service is reachable by name.
+    links:
+      - "portal:ui"
+
+  portal:
+    build: ../apps/portal
+    environment: { SERVICE_NAME: portal }
+    networks: [frontend]
+    healthcheck: &health
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 40s
+
+  appointments:
+    build: ../apps/appointments
+    environment: { SERVICE_NAME: appointments }
+    networks: [frontend]
+    healthcheck: *health
+    deploy:
+      replicas: 2                   # scaling with deploy: two copies behind the gateway
+      resources:
+        limits: { cpus: "0.50", memory: 512M }
+
+  doctors:
+    build: ../apps/doctors
+    environment:
+      SERVICE_NAME: doctors
+      DB_HOST: mariadb
+    networks: [frontend, backend]
+    healthcheck: *health
+    depends_on:
+      mariadb: { condition: service_healthy }
+
+  billing:
+    build: ../apps/billing
+    environment:
+      SERVICE_NAME: billing
+      DB_HOST: db                   # "db" is the alias of the postgres service
+    networks: [frontend, backend]
+    healthcheck: *health
+    depends_on:
+      postgres:   { condition: service_healthy }
+      db-migrate: { condition: service_completed_successfully }
+
+  booking:
+    build: ../apps/booking
+    environment:
+      SERVICE_NAME: booking
+      REDIS_HOST: redis
+    networks: [frontend, backend]
+    healthcheck: *health
+    depends_on:
+      redis: { condition: service_healthy }
+
+  # ---------------- datastores ----------------
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes: [pgdata:/var/lib/postgresql/data]       # named volume: data survives "down"
+    networks:
+      backend:
+        aliases: [db]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  mariadb:
+    image: mariadb:11
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+      MARIADB_DATABASE: doctors
+    volumes: [mariadbdata:/var/lib/mysql]
+    networks: [backend]
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    networks: [backend]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # One-shot job: creates a table, then exits with code 0.
+  db-migrate:
+    image: postgres:16-alpine
+    entrypoint: ["psql"]
+    command:
+      - "-h"
+      - "db"
+      - "-U"
+      - "${POSTGRES_USER}"
+      - "-d"
+      - "${POSTGRES_DB}"
+      - "-c"
+      - "CREATE TABLE IF NOT EXISTS invoices (id serial PRIMARY KEY, patient text, amount numeric);"
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    networks: [backend]
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: "no"
+
+  # ---------------- profiles: optional services ----------------
+  adminer:
+    image: adminer:4
+    profiles: ["tools"]
+    ports: ["8081:8080"]
+    networks: [backend]
+
+networks:
+  frontend:
+  backend:
+
+volumes:
+  pgdata:
+  mariadbdata:
